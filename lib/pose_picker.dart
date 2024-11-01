@@ -13,14 +13,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:test_drive/main.dart';
 
-class PosePicker extends StatefulWidget {
-  const PosePicker({super.key});
+class PosePage extends StatefulWidget {
+  const PosePage({super.key});
 
   @override
-  State<PosePicker> createState() => _PosePageState();
+  State<PosePage> createState() => _PosePageState();
 }
 
-class _PosePageState extends State<PosePicker> {
+class _PosePageState extends State<PosePage> {
   List<XFile>? _mediaFileList;
 
   void _setImageFileListFromFile(XFile? value) {

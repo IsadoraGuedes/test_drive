@@ -12,15 +12,16 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:test_drive/main.dart';
+import 'package:test_drive/pose_picker.dart';
 
-class MyImagePicker extends StatefulWidget {
-  const MyImagePicker({super.key});
+class MyClothPage extends StatefulWidget {
+  const MyClothPage({super.key});
 
   @override
-  State<MyImagePicker> createState() => _MyHomePageState();
+  State<MyClothPage> createState() => _MyClothPageState();
 }
 
-class _MyHomePageState extends State<MyImagePicker> {
+class _MyClothPageState extends State<MyClothPage> {
   List<XFile>? _mediaFileList;
 
   void _setImageFileListFromFile(XFile? value) {
@@ -72,7 +73,7 @@ class _MyHomePageState extends State<MyImagePicker> {
       return retrieveError;
     }
     if (_mediaFileList != null) {
-      return getPreview();
+      return displayPickImageConfirmDialog();
     } else if (_pickImageError != null) {
       return Text(
         'Pick image error: $_pickImageError',
@@ -85,30 +86,21 @@ class _MyHomePageState extends State<MyImagePicker> {
 
   Widget getPreview() {
     return Semantics(
-      label: 'image_picker_example_picked_images',
-      child: ListView.builder(
-        key: UniqueKey(),
-        itemBuilder: (BuildContext context, int index) {
-          final String? mime = lookupMimeType(_mediaFileList![index].path);
-
-          // Why network for web?
-          // See https://pub.dev/packages/image_picker_for_web#limitations-on-the-web-platform
-          return Semantics(
-            label: 'image_picker_example_picked_image',
-            child: (mime == null || mime.startsWith('image/')
-                ? Image.file(
-                    File(_mediaFileList![index].path),
-                    errorBuilder: (BuildContext context, Object error,
-                        StackTrace? stackTrace) {
-                      return const Center(
-                          child: Text('This image type is not supported'));
-                    },
-                  )
-                : null),
-          );
-        },
-        itemCount: _mediaFileList!.length,
-      ),
+      label: 'image_picker_example_picked_image',
+      child: _mediaFileList != null && _mediaFileList!.isNotEmpty
+          ? Image.file(
+              File(_mediaFileList![0].path), // Exibe apenas a primeira imagem
+              errorBuilder:
+                  (BuildContext context, Object error, StackTrace? stackTrace) {
+                return const Center(
+                  child: Text('This image type is not supported'),
+                );
+              },
+            )
+          : const Center(
+              child: Text(
+                  'No image selected'), // Mensagem caso a lista esteja vazia
+            ),
     );
   }
 
@@ -237,6 +229,27 @@ class _MyHomePageState extends State<MyImagePicker> {
             ],
           );
         });
+  }
+
+  Widget displayPickImageConfirmDialog() {
+    return AlertDialog(
+      title: const Text('Confirma seleção da imagem abaixo?'),
+      content: getPreview(),
+      actions: <Widget>[
+        TextButton(
+          child: const Text('CANCEL'),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+        TextButton(
+            child: const Text('CONFIRM'),
+            onPressed: () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const PosePage()));
+            }),
+      ],
+    );
   }
 }
 
