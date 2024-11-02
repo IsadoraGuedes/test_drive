@@ -1,16 +1,9 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-// ignore_for_file: public_member_api_docs
-
 import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mime/mime.dart';
 import 'package:test_drive/main.dart';
 import 'package:test_drive/pose_picker.dart';
 
@@ -22,14 +15,13 @@ class MyClothPage extends StatefulWidget {
 }
 
 class _MyClothPageState extends State<MyClothPage> {
-  List<XFile>? _mediaFileList;
+  XFile? _image;
 
   void _setImageFileListFromFile(XFile? value) {
-    _mediaFileList = value == null ? null : <XFile>[value];
+    _image = value;
   }
 
   dynamic _pickImageError;
-  bool isVideo = false;
 
   String? _retrieveDataError;
 
@@ -40,24 +32,21 @@ class _MyClothPageState extends State<MyClothPage> {
     required BuildContext context,
   }) async {
     if (context.mounted) {
-      await _displayPickImageDialog(context, false, (double? maxWidth,
-          double? maxHeight, int? quality, int? limit) async {
-        try {
-          final XFile? pickedFile = await _picker.pickImage(
-            source: source,
-            maxWidth: maxWidth,
-            maxHeight: maxHeight,
-            imageQuality: quality,
-          );
-          setState(() {
-            _setImageFileListFromFile(pickedFile);
-          });
-        } catch (e) {
-          setState(() {
-            _pickImageError = e;
-          });
-        }
-      });
+      try {
+        final XFile? pickedFile = await _picker.pickImage(
+          source: source,
+          // maxWidth: maxWidth,
+          // maxHeight: maxHeight,
+          // imageQuality: quality,
+        );
+        setState(() {
+          _setImageFileListFromFile(pickedFile);
+        });
+      } catch (e) {
+        setState(() {
+          _pickImageError = e;
+        });
+      }
     }
   }
 
@@ -67,13 +56,19 @@ class _MyClothPageState extends State<MyClothPage> {
     super.dispose();
   }
 
-  Widget _previewImages() {
+  Widget _handlePreview() {
     final Text? retrieveError = _getRetrieveErrorWidget();
     if (retrieveError != null) {
       return retrieveError;
     }
-    if (_mediaFileList != null) {
-      return displayPickImageConfirmDialog();
+    if (_image != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) => displayPickImageConfirmDialog(),
+        );
+      });
+      return Container();
     } else if (_pickImageError != null) {
       return Text(
         'Pick image error: $_pickImageError',
@@ -87,9 +82,9 @@ class _MyClothPageState extends State<MyClothPage> {
   Widget getPreview() {
     return Semantics(
       label: 'image_picker_example_picked_image',
-      child: _mediaFileList != null && _mediaFileList!.isNotEmpty
+      child: _image != null
           ? Image.file(
-              File(_mediaFileList![0].path), // Exibe apenas a primeira imagem
+              File(_image!.path),
               errorBuilder:
                   (BuildContext context, Object error, StackTrace? stackTrace) {
                 return const Center(
@@ -98,19 +93,9 @@ class _MyClothPageState extends State<MyClothPage> {
               },
             )
           : const Center(
-              child: Text(
-                  'No image selected'), // Mensagem caso a lista esteja vazia
+              child: Text('No image selected'),
             ),
     );
-  }
-
-  // Widget getConfirmPreview(index) {
-  //   print('getImagePreviewConfirm');
-  //   return
-  // }
-
-  Widget _handlePreview() {
-    return _previewImages();
   }
 
   Future<void> retrieveLostData() async {
@@ -119,12 +104,12 @@ class _MyClothPageState extends State<MyClothPage> {
       return;
     }
     if (response.file != null) {
-      isVideo = false;
       setState(() {
         if (response.files == null) {
           _setImageFileListFromFile(response.file);
         } else {
-          _mediaFileList = response.files;
+          //o que isso faz?
+          _image = response.file;
         }
       });
     } else {
@@ -205,46 +190,25 @@ class _MyClothPageState extends State<MyClothPage> {
     return null;
   }
 
-  Future<void> _displayPickImageDialog(
-      BuildContext context, bool isMulti, OnPickImageCallback onPick) async {
-    return showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Add optional parameters'),
-            content: const Text(' confirmar? '),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('CANCEL'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                  child: const Text('PICK'),
-                  onPressed: () {
-                    onPick(null, null, null, 1);
-                    Navigator.of(context).pop();
-                  }),
-            ],
-          );
-        });
-  }
-
   Widget displayPickImageConfirmDialog() {
     return AlertDialog(
-      title: const Text('Confirma seleção da imagem abaixo?'),
+      title: const Text('Confirmar seleção?'),
+      elevation: 1,
       content: getPreview(),
       actions: <Widget>[
         TextButton(
-          child: const Text('CANCEL'),
+          child: const Text('Cancelar'),
           onPressed: () {
-            Navigator.of(context).pop();
+            setState(() {
+              _image = null;
+            });
+            Navigator.of(context, rootNavigator: true).pop();
           },
         ),
         TextButton(
-            child: const Text('CONFIRM'),
+            child: const Text('Confirmar'),
             onPressed: () {
+              Navigator.of(context, rootNavigator: true).pop();
               Navigator.push(context,
                   MaterialPageRoute(builder: (context) => const PosePage()));
             }),
@@ -252,6 +216,3 @@ class _MyClothPageState extends State<MyClothPage> {
     );
   }
 }
-
-typedef OnPickImageCallback = void Function(
-    double? maxWidth, double? maxHeight, int? quality, int? limit);

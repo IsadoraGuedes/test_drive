@@ -10,8 +10,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mime/mime.dart';
 import 'package:test_drive/main.dart';
+import 'package:test_drive/result.dart';
 
 class PosePage extends StatefulWidget {
   const PosePage({super.key});
@@ -21,14 +21,13 @@ class PosePage extends StatefulWidget {
 }
 
 class _PosePageState extends State<PosePage> {
-  List<XFile>? _mediaFileList;
+  XFile? _image;
 
   void _setImageFileListFromFile(XFile? value) {
-    _mediaFileList = value == null ? null : <XFile>[value];
+    _image = value;
   }
 
   dynamic _pickImageError;
-  bool isVideo = false;
 
   String? _retrieveDataError;
 
@@ -39,24 +38,21 @@ class _PosePageState extends State<PosePage> {
     required BuildContext context,
   }) async {
     if (context.mounted) {
-      await _displayPickImageDialog(context, false, (double? maxWidth,
-          double? maxHeight, int? quality, int? limit) async {
-        try {
-          final XFile? pickedFile = await _picker.pickImage(
-            source: source,
-            maxWidth: maxWidth,
-            maxHeight: maxHeight,
-            imageQuality: quality,
-          );
-          setState(() {
-            _setImageFileListFromFile(pickedFile);
-          });
-        } catch (e) {
-          setState(() {
-            _pickImageError = e;
-          });
-        }
-      });
+      try {
+        final XFile? pickedFile = await _picker.pickImage(
+          source: source,
+          // maxWidth: maxWidth,
+          // maxHeight: maxHeight,
+          // imageQuality: quality,
+        );
+        setState(() {
+          _setImageFileListFromFile(pickedFile);
+        });
+      } catch (e) {
+        setState(() {
+          _pickImageError = e;
+        });
+      }
     }
   }
 
@@ -66,41 +62,19 @@ class _PosePageState extends State<PosePage> {
     super.dispose();
   }
 
-  Widget _previewImages() {
+  Widget _handlePreview() {
     final Text? retrieveError = _getRetrieveErrorWidget();
     if (retrieveError != null) {
       return retrieveError;
     }
-    if (_mediaFileList != null) {
-      return Semantics(
-        label: 'image_picker_example_picked_images',
-        child: ListView.builder(
-          key: UniqueKey(),
-          itemBuilder: (BuildContext context, int index) {
-            final String? mime = lookupMimeType(_mediaFileList![index].path);
-
-            // Why network for web?
-            // See https://pub.dev/packages/image_picker_for_web#limitations-on-the-web-platform
-            return Semantics(
-              label: 'image_picker_example_picked_image',
-              child: kIsWeb
-                  ? Image.network(_mediaFileList![index].path)
-                  : (mime == null || mime.startsWith('image/')
-                      ? Image.file(
-                          File(_mediaFileList![index].path),
-                          errorBuilder: (BuildContext context, Object error,
-                              StackTrace? stackTrace) {
-                            return const Center(
-                                child:
-                                    Text('This image type is not supported'));
-                          },
-                        )
-                      : null),
-            );
-          },
-          itemCount: _mediaFileList!.length,
-        ),
-      );
+    if (_image != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) => displayPickImageConfirmDialog(),
+        );
+      });
+      return Container();
     } else if (_pickImageError != null) {
       return Text(
         'Pick image error: $_pickImageError',
@@ -111,8 +85,23 @@ class _PosePageState extends State<PosePage> {
     }
   }
 
-  Widget _handlePreview() {
-    return _previewImages();
+  Widget getPreview() {
+    return Semantics(
+      label: 'image_picker_example_picked_image',
+      child: _image != null
+          ? Image.file(
+              File(_image!.path),
+              errorBuilder:
+                  (BuildContext context, Object error, StackTrace? stackTrace) {
+                return const Center(
+                  child: Text('This image type is not supported'),
+                );
+              },
+            )
+          : const Center(
+              child: Text('No image selected'),
+            ),
+    );
   }
 
   Future<void> retrieveLostData() async {
@@ -121,12 +110,12 @@ class _PosePageState extends State<PosePage> {
       return;
     }
     if (response.file != null) {
-      isVideo = false;
       setState(() {
         if (response.files == null) {
           _setImageFileListFromFile(response.file);
         } else {
-          _mediaFileList = response.files;
+          //o que isso faz?
+          _image = response.file;
         }
       });
     } else {
@@ -169,7 +158,7 @@ class _PosePageState extends State<PosePage> {
           title: const Text('Peça de roupa'),
         ),
         body: Center(
-          child: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+          child: defaultTargetPlatform == TargetPlatform.android
               ? FutureBuilder<void>(
                   future: retrieveLostData(),
                   builder:
@@ -207,32 +196,29 @@ class _PosePageState extends State<PosePage> {
     return null;
   }
 
-  Future<void> _displayPickImageDialog(
-      BuildContext context, bool isMulti, OnPickImageCallback onPick) async {
-    return showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Add optional parameters'),
-            content: const Text(' confirmar? '),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('CANCEL'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                  child: const Text('PICK'),
-                  onPressed: () {
-                    onPick(null, null, null, 1);
-                    Navigator.of(context).pop();
-                  }),
-            ],
-          );
-        });
+  Widget displayPickImageConfirmDialog() {
+    return AlertDialog(
+      title: const Text('Confirmar seleção?'),
+      elevation: 1,
+      content: getPreview(),
+      actions: <Widget>[
+        TextButton(
+          child: const Text('Cancelar'),
+          onPressed: () {
+            setState(() {
+              _image = null;
+            });
+            Navigator.of(context, rootNavigator: true).pop();
+          },
+        ),
+        TextButton(
+            child: const Text('Confirmar'),
+            onPressed: () {
+              Navigator.of(context, rootNavigator: true).pop();
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const ResultPage()));
+            }),
+      ],
+    );
   }
 }
-
-typedef OnPickImageCallback = void Function(
-    double? maxWidth, double? maxHeight, int? quality, int? limit);
