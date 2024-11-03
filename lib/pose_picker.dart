@@ -14,17 +14,29 @@ import 'package:test_drive/main.dart';
 import 'package:test_drive/result.dart';
 
 class PosePage extends StatefulWidget {
-  const PosePage({super.key});
+  final XFile? clothImage;
+
+  const PosePage({super.key, required this.clothImage});
 
   @override
   State<PosePage> createState() => _PosePageState();
 }
 
 class _PosePageState extends State<PosePage> {
+  late XFile? clothImage;
   XFile? _image;
 
   void _setImageFileListFromFile(XFile? value) {
     _image = value;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    clothImage = widget.clothImage;
+
+    print(clothImage);
+    //your code here
   }
 
   dynamic _pickImageError;
@@ -155,7 +167,7 @@ class _PosePageState extends State<PosePage> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('Peça de roupa'),
+          title: const Text('Pose'),
         ),
         body: Center(
           child: defaultTargetPlatform == TargetPlatform.android
@@ -215,8 +227,11 @@ class _PosePageState extends State<PosePage> {
             child: const Text('Confirmar'),
             onPressed: () {
               Navigator.of(context, rootNavigator: true).pop();
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const ResultPage()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ResultPage(
+                          clothImage: clothImage, personImage: _image)));
             }),
       ],
     );

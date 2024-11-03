@@ -208,9 +208,12 @@ class _MyClothPageState extends State<MyClothPage> {
         TextButton(
             child: const Text('Confirmar'),
             onPressed: () {
+              final XFile? test = _image;
               Navigator.of(context, rootNavigator: true).pop();
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const PosePage()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => PosePage(clothImage: test)));
             }),
       ],
     );
